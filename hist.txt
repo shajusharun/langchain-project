@@ -1,0 +1,16 @@
+ 1033  python hinglish_transcript.py
+ 1034  python create_hinglish_transcript.py
+ 1035  python create_hinglish_transcript.py
+ 1036  python create_hinglish_transcript.py
+ 1037  python create_hinglish_transcript.py
+ 1038  python create_hinglish_transcript.py
+ 1039  python create_hinglish_transcript.py
+ 1040  python create_hinglish_transcript.py 6fhFI8o3PPQ
+ 1041  python create_hinglish_transcript.py 5xbYT4nkT6E
+ 1042  python create_hinglish_transcript.py 5xbYT4nkT6E
+ 1043  python create_hinglish_transcript.py 5xbYT4nkT6E
+ 1044  python create_hinglish_transcript.py BgP-AdkFkdA
+ 1045  pip install streamlit
+ 1046  streamlit run frontend.py
+ 1047  streamlit run frontend.py
+ 1048  history
