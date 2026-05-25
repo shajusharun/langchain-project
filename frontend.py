@@ -1,11 +1,9 @@
+from email.policy import default
 import streamlit as st
 from subtitle_generator import generate_srt_stream
 from urllib.parse import urlparse, parse_qs
 
 
-def extract_video_id(url):
-    parsed_url = urlparse(url)
-    return parse_qs(parsed_url.query).get("v", [None])[0]
 
 if "srt_blocks" not in st.session_state:
     st.session_state["srt_blocks"] = []
@@ -15,8 +13,8 @@ if "is_generating" not in st.session_state:
 
 st.title("YouTube Hinglish Subtitle Generator")
 
-video_link = st.text_input("Enter YouTube Video Link")
-video_id = extract_video_id(video_link)
+video_link = st.text_input("Enter YouTube Video Link", value="youtube.com/watch?v=TlppYYh-Gwc")
+
 
 if st.button("Generate SRT"):
     st.session_state["srt_blocks"] = []
@@ -26,7 +24,7 @@ if st.button("Generate SRT"):
     output_container = st.container()
 
     with st.spinner("Generating Hinglish subtitles..."):
-        for srt_block, index, total_blocks in generate_srt_stream(video_id, number_of_blocks=3000):
+        for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=3000):
             st.session_state["srt_blocks"].append(srt_block)
 
             with output_container:

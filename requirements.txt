@@ -72,4 +72,5 @@ uvicorn==0.47.0
 websockets==16.0
 xxhash==3.7.0
 youtube-transcript-api==1.2.4
+yt-dlp==2026.3.17
 zstandard==0.25.0

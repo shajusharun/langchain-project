@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 import streamlit as st
 from youtube_transcript_api.proxies import WebshareProxyConfig
 import requests
+import yt_dlp
+from urllib.parse import urlparse, parse_qs
+import difflib
 
 
 load_dotenv()
@@ -18,6 +21,22 @@ def format_srt_time(seconds):
     milliseconds = int((seconds - int(seconds)) * 1000)
 
     return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
+
+
+def get_video_details(url):
+    ydl_opts = {
+        "quiet": True,
+        "skip_download": True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+
+    return {
+        "title": info.get("title"),
+        "description": info.get("description"),
+        "channel": info.get("channel"),
+    }
 
 
 
@@ -66,11 +85,15 @@ def fix_capitalization(text, should_capitalize_start):
     return result
 
 
-def generate_srt_stream(video_id, number_of_blocks=None ):
+def extract_video_id(url):
+    parsed_url = urlparse(url)
+    return parse_qs(parsed_url.query).get("v", [None])[0]
+
+def generate_srt_stream(video_link, number_of_blocks=None ):
 
 
 
-
+    video_id = extract_video_id(video_link)
     # response = requests.post(
     # "https://www.youtube-transcript.io/api/transcripts",
     # headers={
@@ -110,11 +133,33 @@ def generate_srt_stream(video_id, number_of_blocks=None ):
         )
     )
     #api = YouTubeTranscriptApi()
-    transcript = api.fetch(video_id, languages=["hi"])
+
+    videoDetails = get_video_details(video_link)
+    print("\n\nVideo Details")
+    print(videoDetails)
+    
+    video_id = extract_video_id(video_link)
+    print(f"Video ID: {video_id}")
+    transcript_list = api.list(video_id)
+    
+    print(transcript_list)
+
+    transcript = transcript_list.find_generated_transcript(["hi"])
+    print("\n\n\nHHHHHHHHHHHHHH\n\n\n")
+    transcript = transcript.fetch()
+
+    #fetched = transcript.fetch()
+    #transcript = api.fetch(video_id, languages=["hi"])
     print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
-    print(len(transcript))
+
     print(transcript)
+    print(len(transcript))
+ 
     total_blocks = len(transcript)
+
+    
+    print("\n\n\n-----------------------TRANSLATED--------------------\n\n\n")
+    #print(translateTranscript(transcript, videoDetails))
 
     previous_line_ended_with_full_stop = True
     for index, line in enumerate(transcript, start=1):
@@ -137,3 +182,63 @@ def generate_srt_stream(video_id, number_of_blocks=None ):
         )
 
         yield srt_block, index, total_blocks
+
+
+
+def translateTranscript(transcript, videoDetails):
+
+    SEP = "<<<CUT>>>"
+    joined_text = f" {SEP} ".join(line.text for line in transcript)
+
+
+    prompt = f"""
+    Translate this Hindi YouTube transcript into Hinglish.
+    Keep it phonetically similar and close to meaning to the original line. Any English words used should have correct spelling.    
+    Do not add extra explanation.
+    Keep this separator exactly unchanged wherever it appears: <<<CUT>>>
+
+    Hindi:
+    {joined_text}
+
+    Hinglish:
+    """
+
+    print(f"PROMPT: {prompt}")
+    response = llm.invoke(prompt)
+
+    print("Inital Translation done, now enriching the result")
+    output = response.content.strip()
+
+    prompt_enrich = f"""
+    Attached below is the transcript for a youtube video that was made from the video's audio. 
+    Therefore, some words especially proper nouns including names of people, places etc. could be wrong in the original transcript. So correct them if and only if you find something relevant from the video details given below.
+    
+    Title: {videoDetails["title"]}
+    Channel Name: {videoDetails["channel"]}
+    Video Description: {videoDetails["description"]}
+
+    Do not add extra explanation.
+    Keep this separator exactly unchanged wherever it appears: <<<CUT>>>
+
+    Transcript:
+    {output}
+    Fixed Transcript:
+    """
+
+    response = llm.invoke(prompt_enrich)
+
+    output2 = response.content.strip()
+
+    diff = difflib.ndiff(output.split(), output2.split())
+    print("\nCHANGES IN ENRICHMENT\n")
+    print("\n".join(diff))
+    
+
+    converted_lines = output2.split(SEP)
+    print("\n\n Number of lines in original, firsttranslate and fixtranslate ")
+    print(f"{len(transcript)}, {len(output.split(SEP))}  , {len(converted_lines)} ")
+
+    for line, new_text in zip(transcript, converted_lines):
+        line.text = new_text.strip()
+        #line["text"] = new_text.strip()
+    return transcript
