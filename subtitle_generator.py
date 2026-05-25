@@ -3,6 +3,7 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import streamlit as st
 from youtube_transcript_api.proxies import GenericProxyConfig
+import requests
 
 
 load_dotenv()
@@ -67,30 +68,64 @@ def fix_capitalization(text, should_capitalize_start):
 
 def generate_srt_stream(video_id, number_of_blocks=None ):
 
-    proxy_url = st.secrets.get("PROXY_URL")
 
-    api = YouTubeTranscriptApi(
-        proxy_config=GenericProxyConfig(
-            http_url=proxy_url,
-            https_url=proxy_url,
-        )
+
+
+    response = requests.post(
+    "https://www.youtube-transcript.io/api/transcripts",
+    headers={
+    "Authorization": "Basic 6a141ab7020bd93fbc31f06e", 
+    "Content-Type": "application/json"},
+    json={"ids": ["eBSLhYnDXXM"]}
     )
+
+
+    data = response.json()
+
+    # If API returns a list, take first item
+    if isinstance(data, list):
+        data = data[0]
+
+    segments = data["tracks"][0]["transcript"]
+
+    transcript = [
+        segment
+        for segment in segments
+        if segment.get("text", "").strip()
+    ]
+   
+
+    #print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
+    #print(len(clean_segments))
+    #print(clean_segments)
+    
+    #proxy_url = st.secrets.get("PROXY_URL")
+
+    #api = YouTubeTranscriptApi(
+        # proxy_config=GenericProxyConfig(
+        #     http_url=proxy_url,
+        #     https_url=proxy_url,
+        # )
+    #)
     #api = YouTubeTranscriptApi()
-    transcript = api.fetch(video_id, languages=["hi"])
+    #transcript = api.fetch(video_id, languages=["hi"])
+    #print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
+    #print(len(transcript))
+    #print(transcript)
     total_blocks = len(transcript)
 
     previous_line_ended_with_full_stop = True
     for index, line in enumerate(transcript, start=1):
         if number_of_blocks and index > number_of_blocks:
             break
-        hinglish_text = translate_to_hinglish(line.text)
+        hinglish_text = translate_to_hinglish(line["text"])
         hinglish_text = fix_capitalization(
             hinglish_text,
             previous_line_ended_with_full_stop
         )
 
-        start_time = format_srt_time(line.start)
-        end_time = format_srt_time(line.start + line.duration)
+        start_time = format_srt_time(float(line["start"]))
+        end_time = format_srt_time(float(line["start"]) + float(line["dur"]))
         previous_line_ended_with_full_stop = hinglish_text.endswith(".")
 
         srt_block = (
