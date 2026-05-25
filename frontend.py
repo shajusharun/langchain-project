@@ -26,7 +26,7 @@ if st.button("Generate SRT"):
     output_container = st.container()
 
     with st.spinner("Generating Hinglish subtitles..."):
-        for srt_block, index, total_blocks in generate_srt_stream(video_id, number_of_blocks=1000):
+        for srt_block, index, total_blocks in generate_srt_stream(video_id, number_of_blocks=3000):
             st.session_state["srt_blocks"].append(srt_block)
 
             with output_container:
