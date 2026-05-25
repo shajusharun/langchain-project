@@ -2,7 +2,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import streamlit as st
-from youtube_transcript_api.proxies import GenericProxyConfig
+from youtube_transcript_api.proxies import WebshareProxyConfig
 import requests
 
 
@@ -71,47 +71,49 @@ def generate_srt_stream(video_id, number_of_blocks=None ):
 
 
 
-    response = requests.post(
-    "https://www.youtube-transcript.io/api/transcripts",
-    headers={
-    "Authorization": "Basic 6a141ab7020bd93fbc31f06e", 
-    "Content-Type": "application/json"},
-    json={"ids": ["eBSLhYnDXXM"]}
-    )
+    # response = requests.post(
+    # "https://www.youtube-transcript.io/api/transcripts",
+    # headers={
+    # "Authorization": "Basic 6a141ab7020bd93fbc31f06e", 
+    # "Content-Type": "application/json"},
+    # json={"ids": ["eBSLhYnDXXM"]}
+    # )
 
 
-    data = response.json()
+    # data = response.json()
 
-    # If API returns a list, take first item
-    if isinstance(data, list):
-        data = data[0]
+    # # If API returns a list, take first item
+    # if isinstance(data, list):
+    #     data = data[0]
 
-    segments = data["tracks"][0]["transcript"]
+    # segments = data["tracks"][0]["transcript"]
 
-    transcript = [
-        segment
-        for segment in segments
-        if segment.get("text", "").strip()
-    ]
+    # transcript = [
+    #     segment
+    #     for segment in segments
+    #     if segment.get("text", "").strip()
+    # ]
    
 
     #print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
     #print(len(clean_segments))
     #print(clean_segments)
     
-    #proxy_url = st.secrets.get("PROXY_URL")
+    proxy_un = st.secrets.get("PROXY_UN")
+    proxy_pw = st.secrets.get("PROXY_PW")
 
-    #api = YouTubeTranscriptApi(
-        # proxy_config=GenericProxyConfig(
-        #     http_url=proxy_url,
-        #     https_url=proxy_url,
-        # )
-    #)
+
+    api = YouTubeTranscriptApi(
+        proxy_config=WebshareProxyConfig(
+            proxy_username=proxy_un,
+            proxy_password=proxy_pw,
+        )
+    )
     #api = YouTubeTranscriptApi()
-    #transcript = api.fetch(video_id, languages=["hi"])
-    #print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
-    #print(len(transcript))
-    #print(transcript)
+    transcript = api.fetch(video_id, languages=["hi"])
+    print("\n\n\n-----------------------SHSHSHSHSHSHSHSHSHSHSHSH--------------------\n\n\n")
+    print(len(transcript))
+    print(transcript)
     total_blocks = len(transcript)
 
     previous_line_ended_with_full_stop = True
