@@ -1,11 +1,22 @@
+import streamlit as st
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.proxies import GenericProxyConfig
 
 video_id = "6fhFI8o3PPQ"
 
-api = YouTubeTranscriptApi()
+
+proxy_url = st.secrets.get("PROXY_URL")
+
+api = YouTubeTranscriptApi(
+    proxy_config=GenericProxyConfig(
+        http_url=proxy_url,
+        https_url=proxy_url,
+    )
+)
+#api = YouTubeTranscriptApi()
 
 transcript = api.fetch(video_id, languages=["hi"])
 

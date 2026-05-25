@@ -13,7 +13,7 @@ if "srt_blocks" not in st.session_state:
 if "is_generating" not in st.session_state:
     st.session_state["is_generating"] = False
 
-st.title("YouTube Hinglish SRT Generator")
+st.title("YouTube Hinglish Subtitles Generator")
 
 video_link = st.text_input("Enter YouTube Video Link")
 video_id = extract_video_id(video_link)
