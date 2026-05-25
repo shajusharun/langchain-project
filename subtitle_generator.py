@@ -1,6 +1,9 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+import streamlit as st
+from youtube_transcript_api.proxies import GenericProxyConfig
+
 
 load_dotenv()
 
@@ -63,7 +66,16 @@ def fix_capitalization(text, should_capitalize_start):
 
 
 def generate_srt_stream(video_id, number_of_blocks=None ):
-    api = YouTubeTranscriptApi()
+
+    proxy_url = st.secrets.get("PROXY_URL")
+
+    api = YouTubeTranscriptApi(
+        proxy_config=GenericProxyConfig(
+            http_url=proxy_url,
+            https_url=proxy_url,
+        )
+    )
+    #api = YouTubeTranscriptApi()
     transcript = api.fetch(video_id, languages=["hi"])
     total_blocks = len(transcript)
 
