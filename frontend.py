@@ -1,6 +1,6 @@
 from email.policy import default
 import streamlit as st
-from subtitle_generator import generate_srt_stream
+from subtitle_generator import generate_srt_stream, extract_video_id
 from urllib.parse import urlparse, parse_qs
 
 
@@ -50,7 +50,7 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         )
 
         final_srt_content += edited_block.strip() + "\n\n"
-
+    video_id = extract_video_id(video_link)
     st.download_button(
         label="Download Edited SRT",
         data=final_srt_content,
