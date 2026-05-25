@@ -120,14 +120,14 @@ def generate_srt_stream(video_id, number_of_blocks=None ):
     for index, line in enumerate(transcript, start=1):
         if number_of_blocks and index > number_of_blocks:
             break
-        hinglish_text = translate_to_hinglish(line["text"])
+        hinglish_text = translate_to_hinglish(line.text)
         hinglish_text = fix_capitalization(
             hinglish_text,
             previous_line_ended_with_full_stop
         )
 
-        start_time = format_srt_time(float(line["start"]))
-        end_time = format_srt_time(float(line["start"]) + float(line["dur"]))
+        start_time = format_srt_time(line.start)
+        end_time = format_srt_time(line.start + line.duration)
         previous_line_ended_with_full_stop = hinglish_text.endswith(".")
 
         srt_block = (
