@@ -51,6 +51,25 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         block.strip() + "\n\n" for block in st.session_state["srt_blocks"]
     )
 
+    # If edit mode is on and the text areas have already been rendered at
+    # least once (so their edited values exist in session_state under their
+    # keys), build the download data from those edited values instead of
+    # the raw, freshly-generated blocks.
+    num_blocks = len(st.session_state["srt_blocks"])
+    edits_available = st.session_state["show_edit"] and all(
+        f"edit_block_{i}" in st.session_state for i in range(1, num_blocks + 1)
+    )
+
+    if edits_available:
+        download_content = "".join(
+            st.session_state[f"edit_block_{i}"].strip() + "\n\n"
+            for i in range(1, num_blocks + 1)
+        )
+        download_filename = f"{video_id}_hinglish_edited.srt"
+    else:
+        download_content = raw_srt_content
+        download_filename = f"{video_id}_hinglish.srt"
+
     with top_section:
         st.success("Generation complete. You can now edit subtitles below.")
 
@@ -63,8 +82,8 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         with col2:
             st.download_button(
                 label="Download SRT file",
-                data=raw_srt_content,
-                file_name=f"{video_id}_hinglish.srt",
+                data=download_content,
+                file_name=download_filename,
                 mime="text/plain"
             )
 
@@ -73,25 +92,13 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
             st.markdown("<div id='edit-section'></div>", unsafe_allow_html=True)
             st.subheader("Edit Subtitles")
 
-            final_srt_content = ""
-
             for index, block in enumerate(st.session_state["srt_blocks"], start=1):
-                edited_block = st.text_area(
+                st.text_area(
                     label=f"Edit Block {index}",
                     value=block,
                     key=f"edit_block_{index}",
                     height=120
                 )
-
-                final_srt_content += edited_block.strip() + "\n\n"
-
-            st.download_button(
-                label="Download Edited SRT",
-                data=final_srt_content,
-                file_name=f"{video_id}_hinglish_edited.srt",
-                mime="text/plain",
-                key="download_edited_srt"
-            )
 
         # Scroll the page down to the edit section once it's rendered
         components.html(
