@@ -43,7 +43,7 @@ if st.session_state["is_generating"]:
         progress_box = st.empty()
 
         with st.spinner("Generating Hinglish subtitles..."):
-            for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=3000):
+            for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=20000):
                 st.session_state["srt_blocks"].append(srt_block)
 
                 with output_container:
