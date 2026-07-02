@@ -86,8 +86,31 @@ def fix_capitalization(text, should_capitalize_start):
 
 
 def extract_video_id(url):
+    if not url:
+        return None
+
+    # Allow URLs without a scheme (e.g. "youtube.com/watch?v=...")
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
     parsed_url = urlparse(url)
-    return parse_qs(parsed_url.query).get("v", [None])[0]
+    host = parsed_url.netloc.lower().replace("www.", "")
+
+    if host == "youtu.be":
+        # Path is like /EY9HBncyvZQ — video id is the first path segment.
+        # Any query string (e.g. ?si=...) is ignored.
+        video_id = parsed_url.path.lstrip("/").split("/")[0]
+        return video_id or None
+
+    if host in ("youtube.com", "m.youtube.com"):
+        if parsed_url.path == "/watch":
+            return parse_qs(parsed_url.query).get("v", [None])[0]
+        if parsed_url.path.startswith(("/embed/", "/shorts/")):
+            segments = parsed_url.path.split("/")
+            return segments[2] if len(segments) > 2 else None
+
+    return None
+
 
 def generate_srt_stream(video_link, number_of_blocks=None ):
 

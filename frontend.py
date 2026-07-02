@@ -100,6 +100,14 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
                     height=120
                 )
 
+            st.download_button(
+                label="Download SRT file",
+                data=download_content,
+                file_name=download_filename,
+                mime="text/plain",
+                key="download_bottom"
+            )
+
         # Scroll the page down to the edit section once it's rendered
         components.html(
             """
