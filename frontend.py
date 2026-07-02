@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from subtitle_generator import generate_srt_stream, extract_video_id, get_video_details
-from history import add_to_history
+from history import start_entry, finish_entry, mark_edited, mark_downloaded
 
 
 if "srt_blocks" not in st.session_state:
@@ -12,6 +12,9 @@ if "is_generating" not in st.session_state:
 
 if "show_edit" not in st.session_state:
     st.session_state["show_edit"] = False
+
+if "history_row" not in st.session_state:
+    st.session_state["history_row"] = None
 
 st.title("YouTube Hinglish Subtitle Generator")
 
@@ -36,17 +39,45 @@ if generate_clicked and not st.session_state["is_generating"]:
     st.session_state["is_generating"] = True
     st.session_state["show_edit"] = False
     st.session_state["history_status"] = None
+    st.session_state["history_row"] = None
     st.rerun()
 
 # Step 2: this run starts with is_generating already True (and the button
 # already rendered disabled above), so it's safe to do the actual work.
 if st.session_state["is_generating"]:
     blocks_generated = 0
+    video_id = extract_video_id(video_link)
 
     with top_section:
         progress_box = st.empty()
 
         with st.spinner("Generating Hinglish subtitles..."):
+            # Add the history row up front, before any subtitle blocks are
+            # generated, so the "Started At" timestamp reflects the true
+            # start time. Wrapped in try/except so a logging hiccup here
+            # doesn't block generation itself. The result is stashed in
+            # session_state (not shown via st.warning here) because the
+            # st.rerun() below would wipe an on-screen message before
+            # you'd ever see it — check history.py's print() logs in the
+            # terminal for full detail regardless.
+            try:
+                details = get_video_details(video_link)
+            except Exception as e:
+                print(f"[frontend] Could not fetch video details before generation: {e!r}", flush=True)
+                details = {}
+
+            try:
+                st.session_state["history_row"] = start_entry(
+                    video_id=video_id,
+                    video_link=video_link,
+                    title=details.get("title"),
+                    channel=details.get("channel"),
+                )
+            except Exception as e:
+                print(f"[frontend] Failed to create history row: {e!r}", flush=True)
+                st.session_state["history_row"] = None
+                st.session_state["history_status"] = ("error", f"Couldn't create history row: {e}")
+
             for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=20000):
                 st.session_state["srt_blocks"].append(srt_block)
                 blocks_generated = index
@@ -56,27 +87,13 @@ if st.session_state["is_generating"]:
 
                 progress_box.write(f"Generated {index}/{total_blocks} subtitle blocks...")
 
-    # Record this video in the Google Sheet history. Wrapped in try/except
-    # so a logging hiccup here doesn't take down an otherwise-successful
-    # generation. The result is stashed in session_state (not shown via
-    # st.warning here) because the st.rerun() right below would wipe out
-    # an on-screen message before you'd ever see it. See history.py's
-    # print() logs in the terminal for full detail regardless.
-    if blocks_generated > 0:
+    if blocks_generated > 0 and st.session_state.get("history_row"):
         try:
-            video_id = extract_video_id(video_link)
-            details = get_video_details(video_link)
-            add_to_history(
-                video_id=video_id,
-                video_link=video_link,
-                title=details.get("title"),
-                channel=details.get("channel"),
-                total_blocks=blocks_generated,
-            )
-            st.session_state["history_status"] = ("success", "Saved this video to the history sheet.")
+            finish_entry(st.session_state["history_row"], total_blocks=blocks_generated)
+            st.session_state["history_status"] = None
         except Exception as e:
-            print(f"[frontend] Failed to save to history: {e!r}", flush=True)
-            st.session_state["history_status"] = ("error", f"Couldn't save this video to history: {e}")
+            print(f"[frontend] Failed to finish history row: {e!r}", flush=True)
+            st.session_state["history_status"] = ("error", f"Couldn't finish history row: {e}")
 
     st.session_state["is_generating"] = False
     # Rerun once more so the button re-renders as enabled immediately,
@@ -121,14 +138,22 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         with col1:
             if st.button("Edit Subtitles before downloading"):
                 st.session_state["show_edit"] = True
+                try:
+                    mark_edited(st.session_state.get("history_row"))
+                except Exception as e:
+                    print(f"[frontend] Failed to mark Edited in history: {e!r}", flush=True)
 
         with col2:
-            st.download_button(
+            if st.download_button(
                 label="Download SRT file",
                 data=download_content,
                 file_name=download_filename,
                 mime="text/plain"
-            )
+            ):
+                try:
+                    mark_downloaded(st.session_state.get("history_row"))
+                except Exception as e:
+                    print(f"[frontend] Failed to mark Downloaded in history: {e!r}", flush=True)
 
     if st.session_state["show_edit"]:
         with output_container:
@@ -143,13 +168,17 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
                     height=120
                 )
 
-            st.download_button(
+            if st.download_button(
                 label="Download SRT file",
                 data=download_content,
                 file_name=download_filename,
                 mime="text/plain",
                 key="download_bottom"
-            )
+            ):
+                try:
+                    mark_downloaded(st.session_state.get("history_row"))
+                except Exception as e:
+                    print(f"[frontend] Failed to mark Downloaded in history: {e!r}", flush=True)
 
         # Scroll the page down to the edit section once it's rendered
         components.html(
