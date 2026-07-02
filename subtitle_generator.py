@@ -7,6 +7,7 @@ import requests
 import yt_dlp
 from urllib.parse import urlparse, parse_qs
 import difflib
+import re
 
 
 load_dotenv()
@@ -116,6 +117,29 @@ def fix_capitalization(text, should_capitalize_start):
             capitalize_next = True
 
     return result
+
+
+def slugify_title(title):
+    """
+    Turn a YouTube video title into a filename-safe slug: lowercase,
+    no emojis/punctuation/symbols, spaces collapsed to single underscores.
+    e.g. "Drishyam Movie Review 🎬!!" -> "drishyam_movie_review"
+
+    Returns "" if nothing usable is left (e.g. title is None/empty, or
+    entirely made of symbols/emojis) — callers should fall back to
+    something else (like the video ID) in that case.
+    """
+    if not title:
+        return ""
+
+    # Keep letters, digits, underscore, whitespace and hyphens; drop
+    # everything else (emojis, punctuation like !, +, :, etc.).
+    cleaned = re.sub(r"[^\w\s-]", "", title, flags=re.UNICODE)
+
+    # Collapse any run of whitespace/hyphens into a single underscore.
+    cleaned = re.sub(r"[\s-]+", "_", cleaned.strip())
+
+    return cleaned.strip("_").lower()
 
 
 def extract_video_id(url):

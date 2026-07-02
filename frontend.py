@@ -1,6 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from subtitle_generator import generate_srt_stream, extract_video_id, get_video_details
+from subtitle_generator import generate_srt_stream, extract_video_id, get_video_details, slugify_title
 from history import start_entry, finish_entry, mark_edited, mark_downloaded
 
 
@@ -15,6 +15,9 @@ if "show_edit" not in st.session_state:
 
 if "history_row" not in st.session_state:
     st.session_state["history_row"] = None
+
+if "video_title" not in st.session_state:
+    st.session_state["video_title"] = ""
 
 st.title("YouTube Hinglish Subtitle Generator")
 
@@ -40,6 +43,7 @@ if generate_clicked and not st.session_state["is_generating"]:
     st.session_state["show_edit"] = False
     st.session_state["history_status"] = None
     st.session_state["history_row"] = None
+    st.session_state["video_title"] = ""
     st.rerun()
 
 # Step 2: this run starts with is_generating already True (and the button
@@ -62,6 +66,7 @@ if st.session_state["is_generating"]:
             # terminal for full detail regardless.
             try:
                 details = get_video_details(video_link)
+                st.session_state["video_title"] = details.get("title") or ""
             except Exception as e:
                 print(f"[frontend] Could not fetch video details before generation: {e!r}", flush=True)
                 details = {}
@@ -107,6 +112,11 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         block.strip() + "\n\n" for block in st.session_state["srt_blocks"]
     )
 
+    # Base the downloaded filename on the video's title (lowercase, no
+    # spaces/emojis/punctuation), falling back to the video ID if the
+    # title couldn't be fetched or turns out to be empty after cleaning.
+    filename_base = slugify_title(st.session_state.get("video_title", "")) or video_id
+
     # If edit mode is on and the text areas have already been rendered at
     # least once (so their edited values exist in session_state under their
     # keys), build the download data from those edited values instead of
@@ -121,10 +131,10 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
             st.session_state[f"edit_block_{i}"].strip() + "\n\n"
             for i in range(1, num_blocks + 1)
         )
-        download_filename = f"{video_id}_hinglish_edited.srt"
+        download_filename = f"{filename_base}_edited.srt"
     else:
         download_content = raw_srt_content
-        download_filename = f"{video_id}_hinglish.srt"
+        download_filename = f"{filename_base}.srt"
 
     with top_section:
         st.success("Generation complete. You can download the SRT file now, and edit/fix it in YT studio OR you can edit/fix subtitles here and then download SRT.")
