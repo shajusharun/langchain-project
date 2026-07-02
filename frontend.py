@@ -16,7 +16,7 @@ st.title("YouTube Hinglish Subtitle Generator")
 
 video_link = st.text_input("Enter YouTube Video Link", value="youtube.com/watch?v=TlppYYh-Gwc")
 
-generate_clicked = st.button("Generate SRT")
+generate_clicked = st.button("Generate SRT", disabled=st.session_state["is_generating"])
 
 # Reserve slots for the top section (success message + action buttons)
 # and the output section (streamed blocks + edit UI), in that order.
@@ -25,11 +25,20 @@ generate_clicked = st.button("Generate SRT")
 top_section = st.container()
 output_container = st.container()
 
-if generate_clicked:
+# Step 1: on click, just flip the flag and rerun. This lets the button
+# re-render as disabled *before* the (blocking) generation loop starts —
+# Streamlit only pushes widget attribute changes like `disabled` between
+# script runs, not mid-loop, so the generation itself can't happen in
+# this same run if we want the disabled state to actually show up.
+if generate_clicked and not st.session_state["is_generating"]:
     st.session_state["srt_blocks"] = []
     st.session_state["is_generating"] = True
     st.session_state["show_edit"] = False
+    st.rerun()
 
+# Step 2: this run starts with is_generating already True (and the button
+# already rendered disabled above), so it's safe to do the actual work.
+if st.session_state["is_generating"]:
     with top_section:
         progress_box = st.empty()
 
@@ -43,6 +52,9 @@ if generate_clicked:
                 progress_box.write(f"Generated {index}/{total_blocks} subtitle blocks...")
 
     st.session_state["is_generating"] = False
+    # Rerun once more so the button re-renders as enabled immediately,
+    # instead of staying visually disabled until the next interaction.
+    st.rerun()
 
 
 if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
