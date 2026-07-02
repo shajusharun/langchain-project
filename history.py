@@ -1,11 +1,17 @@
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import gspread
 import streamlit as st
 from google.oauth2.service_account import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+# Server time (local or Streamlit Cloud) is typically UTC, not IST — so
+# timestamps are computed explicitly in this timezone rather than relying
+# on datetime.now(), which uses whatever timezone the server happens to be in.
+IST = ZoneInfo("Asia/Kolkata")
 
 # Column order for the sheet. A row's lifecycle:
 #  1. start_entry()    -> writes Started At, Video ID, Title, Channel, Link,
@@ -34,7 +40,7 @@ def _log(message):
 
 
 def _now():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _col_index(name):
