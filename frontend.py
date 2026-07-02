@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from subtitle_generator import generate_srt_stream, extract_video_id
+from subtitle_generator import generate_srt_stream, extract_video_id, get_video_details
+from history import add_to_history
 
 
 if "srt_blocks" not in st.session_state:
@@ -34,22 +35,48 @@ if generate_clicked and not st.session_state["is_generating"]:
     st.session_state["srt_blocks"] = []
     st.session_state["is_generating"] = True
     st.session_state["show_edit"] = False
+    st.session_state["history_status"] = None
     st.rerun()
 
 # Step 2: this run starts with is_generating already True (and the button
 # already rendered disabled above), so it's safe to do the actual work.
 if st.session_state["is_generating"]:
+    blocks_generated = 0
+
     with top_section:
         progress_box = st.empty()
 
         with st.spinner("Generating Hinglish subtitles..."):
             for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=20000):
                 st.session_state["srt_blocks"].append(srt_block)
+                blocks_generated = index
 
                 with output_container:
                     st.code(srt_block)
 
                 progress_box.write(f"Generated {index}/{total_blocks} subtitle blocks...")
+
+    # Record this video in the Google Sheet history. Wrapped in try/except
+    # so a logging hiccup here doesn't take down an otherwise-successful
+    # generation. The result is stashed in session_state (not shown via
+    # st.warning here) because the st.rerun() right below would wipe out
+    # an on-screen message before you'd ever see it. See history.py's
+    # print() logs in the terminal for full detail regardless.
+    if blocks_generated > 0:
+        try:
+            video_id = extract_video_id(video_link)
+            details = get_video_details(video_link)
+            add_to_history(
+                video_id=video_id,
+                video_link=video_link,
+                title=details.get("title"),
+                channel=details.get("channel"),
+                total_blocks=blocks_generated,
+            )
+            st.session_state["history_status"] = ("success", "Saved this video to the history sheet.")
+        except Exception as e:
+            print(f"[frontend] Failed to save to history: {e!r}", flush=True)
+            st.session_state["history_status"] = ("error", f"Couldn't save this video to history: {e}")
 
     st.session_state["is_generating"] = False
     # Rerun once more so the button re-renders as enabled immediately,
@@ -84,6 +111,10 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
 
     with top_section:
         st.success("Generation complete. You can download the SRT file now, and edit/fix it in YT studio OR you can edit/fix subtitles here and then download SRT.")
+
+        history_status = st.session_state.get("history_status")
+        if history_status and history_status[0] == "error":
+            st.error(f"History sheet: {history_status[1]}")
 
         col1, col2 = st.columns(2)
 
