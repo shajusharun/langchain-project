@@ -14,6 +14,39 @@ load_dotenv()
 llm = ChatOpenAI(model="gpt-4.1-mini")
 
 
+
+
+import time
+
+# ... existing imports stay as they are ...
+
+
+def retry_on_failure(fn, *args, retries=5, base_delay=2, max_delay=20, **kwargs):
+    """
+    Call fn(*args, **kwargs), retrying on any exception up to `retries` times
+    with exponential backoff (capped at max_delay), before finally re-raising
+    the last exception.
+    """
+    last_exc = None
+
+    for attempt in range(1, retries + 1):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            last_exc = e
+            if attempt == retries:
+                break
+            delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+            print(
+                f"[retry_on_failure] {fn.__name__} failed on attempt "
+                f"{attempt}/{retries}: {e}. Retrying in {delay}s..."
+            )
+            time.sleep(delay)
+
+    raise last_exc
+
+
+
 def format_srt_time(seconds):
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
@@ -157,19 +190,36 @@ def generate_srt_stream(video_link, number_of_blocks=None ):
     )
     #api = YouTubeTranscriptApi()
 
-    videoDetails = get_video_details(video_link)
+
+    videoDetails = retry_on_failure(get_video_details, video_link)
     print("\n\nVideo Details")
     print(videoDetails)
-    
+
     video_id = extract_video_id(video_link)
     print(f"Video ID: {video_id}")
-    transcript_list = api.list(video_id)
-    
+
+    transcript_list = retry_on_failure(api.list, video_id)
+
     print(transcript_list)
 
     transcript = transcript_list.find_generated_transcript(["hi"])
     print("\n\n\nHHHHHHHHHHHHHH\n\n\n")
-    transcript = transcript.fetch()
+    transcript = retry_on_failure(transcript.fetch)
+
+
+    # videoDetails = get_video_details(video_link)
+    # print("\n\nVideo Details")
+    # print(videoDetails)
+    
+    # video_id = extract_video_id(video_link)
+    # print(f"Video ID: {video_id}")
+    # transcript_list = api.list(video_id)
+    
+    # print(transcript_list)
+
+    # transcript = transcript_list.find_generated_transcript(["hi"])
+    # print("\n\n\nHHHHHHHHHHHHHH\n\n\n")
+    # transcript = transcript.fetch()
 
     #fetched = transcript.fetch()
     #transcript = api.fetch(video_id, languages=["hi"])
