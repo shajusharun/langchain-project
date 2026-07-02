@@ -30,16 +30,17 @@ if generate_clicked:
     st.session_state["is_generating"] = True
     st.session_state["show_edit"] = False
 
-    progress_box = st.empty()
+    with top_section:
+        progress_box = st.empty()
 
-    with st.spinner("Generating Hinglish subtitles..."):
-        for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=3000):
-            st.session_state["srt_blocks"].append(srt_block)
+        with st.spinner("Generating Hinglish subtitles..."):
+            for srt_block, index, total_blocks in generate_srt_stream(video_link, number_of_blocks=3000):
+                st.session_state["srt_blocks"].append(srt_block)
 
-            with output_container:
-                st.code(srt_block)
+                with output_container:
+                    st.code(srt_block)
 
-            progress_box.write(f"Generated {index}/{total_blocks} subtitle blocks...")
+                progress_box.write(f"Generated {index}/{total_blocks} subtitle blocks...")
 
     st.session_state["is_generating"] = False
 
