@@ -130,3 +130,12 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
             """,
             height=0,
         )
+    else:
+        # Not in edit mode: keep showing the generated blocks read-only.
+        # These were only written to output_container during the live
+        # generation loop, so on every later rerun (e.g. after clicking
+        # Download) they need to be re-drawn from session_state, or they'd
+        # appear to "disappear" once generation finishes.
+        with output_container:
+            for block in st.session_state["srt_blocks"]:
+                st.code(block.strip())
