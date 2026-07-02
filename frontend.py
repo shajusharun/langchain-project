@@ -83,7 +83,7 @@ if st.session_state["srt_blocks"] and not st.session_state["is_generating"]:
         download_filename = f"{video_id}_hinglish.srt"
 
     with top_section:
-        st.success("Generation complete. You can now edit subtitles below.")
+        st.success("Generation complete. You can download the SRT file now, and edit/fix it in YT studio or \n You can edit/fix subtitles here and then download SRT.")
 
         col1, col2 = st.columns(2)
 
